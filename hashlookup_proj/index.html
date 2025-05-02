@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexedDB Hash Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="script.js" defer></script>
+</head>
+
+<body>
+
+    <h2>Hash Generator & IndexedDB Storage</h2>
+
+    <textarea id="inputText" placeholder="Paste words here..."></textarea>
+    <button onclick="generateHashes()">Go</button>
+
+    <h3>Hashed Results</h3>
+    <table id="hashTable">
+        <thead>
+            <tr>
+                <th>Word</th>
+                <th>MD5</th>
+                <th>SHA-1</th>
+                <th>SHA-256</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+	
+<div id="searchOverlay">
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <p>Searching for hash value...</p>
+    </div>
+</div>
+
+    <h3>Search by Hash</h3>
+    <input type="text" id="searchHash" placeholder="Enter hash digest">
+    <button onclick="startSearch()">Search</button>
+    <p id="searchResult"></p>
+
+    <h3>Backup & Restore</h3>
+    <button onclick="backupData()">Export Database</button>
+    <input type="file" id="importFile">
+    <button onclick="importData()">Import Database</button>
+
+
+
+</body>
+</html>
