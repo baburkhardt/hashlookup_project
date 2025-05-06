@@ -20,7 +20,7 @@
     <table id="hashTable">
         <thead>
             <tr>
-                <th>Word</th>
+                <th>Phrase</th>
                 <th>MD5</th>
                 <th>SHA-1</th>
                 <th>SHA-256</th>
@@ -37,7 +37,14 @@
 </div>
 
     <h3>Search by Hash</h3>
-    <input type="text" id="searchHash" placeholder="Enter hash digest">
+    <input type="text" id="searchHash" placeholder="Enter hash digest"><br>
+	<label for="listSelector">Select List:</label>
+	<select id="listSelector">
+		<option value="shortKrak">ShortKrak</option>
+		<option value="English">English</option>
+		<option value="RockYou">RockYou</option>
+		<option value="all">Search All</option>
+	</select>
     <button onclick="startSearch()">Search</button>
     <p id="searchResult"></p>
 

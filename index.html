@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexedDB Hash Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="script.js" defer></script>
+</head>
+
+<body>
+
+    <h2>Reverse Hash Search (MD5, SHA1, SHA256)</h2>
+
+
+	
+<div id="searchOverlay">
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <p>Searching for hash value...</p>
+    </div>
+</div>
+
+    <h3>Search by Hash</h3>
+    <input type="text" id="searchHash" placeholder="Enter hash digest"><br>
+	<label for="listSelector">Select List:</label>
+	<select id="listSelector">
+		<option value="shortKrak">ShortKrak</option>
+		<option value="English">English</option>
+		<option value="RockYou">RockYou</option>
+		<option value="all">Search All</option>
+	</select>
+    <button onclick="startSearch()">Search</button>
+    <p id="searchResult"></p>
+
+</body>
+</html>

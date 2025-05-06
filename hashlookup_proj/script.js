@@ -4,7 +4,7 @@ let dbReady = false;
 const request = indexedDB.open("HashDatabase", 1);
 request.onupgradeneeded = function(event) {
     db = event.target.result;
-    db.createObjectStore("hashes", { keyPath: "word" });
+    db.createObjectStore("hashes", { keyPath: "phrase" });
 };
 request.onsuccess = function(event) {
     db = event.target.result;
@@ -38,10 +38,10 @@ function generateHashes() {
         const sha1 = CryptoJS.SHA1(word).toString();
         const sha256 = CryptoJS.SHA256(word).toString();
 
-        store.put({ word, md5, sha1, sha256 });
+        store.put({ phrase, md5, sha1, sha256 });
 
         const row = tableBody.insertRow();
-        row.insertCell(0).innerText = word;
+        row.insertCell(0).innerText = phrase;
         row.insertCell(1).innerText = md5;
         row.insertCell(2).innerText = sha1;
         row.insertCell(3).innerText = sha256;
@@ -51,7 +51,7 @@ function generateHashes() {
         console.log("Transaction completed successfully.");
     };
 }
-
+/*
 function searchHash() {
     if (!dbReady) {
         console.error("Database is not initialized or is closing.");
@@ -76,7 +76,7 @@ function searchHash() {
         document.getElementById("searchResult").innerText = result;
     };
 }
-
+*/
 function showSearchOverlay() {
     document.getElementById("searchOverlay").style.display = "flex";
 }
@@ -88,14 +88,50 @@ function hideSearchOverlay() {
 
 function startSearch() {
     const hashInput = document.getElementById("searchHash").value.trim();
+    const selectedList = document.getElementById("listSelector").value;
+
     if (!hashInput) {
         alert("Please enter a hash value to search.");
         return;
     }
-    console.log(`Starting search for hash: ${hashInput}`);
-	showSearchOverlay(); // Show progress overlay
-    searchHashSequentiallyGitHub(hashInput, 0); // Pass the retrieved hash value
+
+    console.log(`Starting search for hash: ${hashInput} in list: ${selectedList}`);
+
+    showSearchOverlay(); // Show progress indicator
+
+    if (selectedList === "all") {
+        searchAllLists(hashInput);
+    } else {
+        searchHashSequentiallyGitHub(hashInput, selectedList, 0); // Pass list correctly
+    }
 }
+
+
+// Function to search all lists
+function searchAllLists(hash) {
+    const lists = ["shortKrak", "English", "RockYou"];
+    let currentListIndex = 0;
+     // Show progress indicator
+    function searchNextList() {
+        if (currentListIndex >= lists.length) {
+            document.getElementById("searchResult").innerText = "Hash not found in any list.";
+            hideSearchOverlay();
+            return;
+        }
+
+        const list = lists[currentListIndex];
+        currentListIndex++;
+
+        console.log(`Moving to next list: ${list}`);
+		showSearchOverlay();
+        searchHashSequentiallyGitHub(hash, list, 0, searchNextList);
+    }
+
+    searchNextList();
+}
+
+
+
 /*
 async function searchHashSequentially(hash, datasetIndex = 0) {
     const transaction = db.transaction(["hashes"], "readonly");
@@ -136,8 +172,65 @@ async function searchHashSequentially(hash, datasetIndex = 0) {
     };
 }
 */
-async function searchHashSequentiallyGitHub(hash, datasetIndex = 0) {
-	console.log(`Searching for hash: ${hash} in dataset ${datasetIndex}`);
+
+async function searchHashSequentiallyGitHub(hash, list, datasetIndex = 0, nextListCallback) {
+    console.log(`Searching for hash: ${hash} in dataset ${datasetIndex} of ${list}`);
+
+    const transaction = db.transaction(["hashes"], "readonly");
+    const store = transaction.objectStore("hashes");
+    const cursorRequest = store.openCursor();
+	showSearchOverlay();
+    cursorRequest.onsuccess = function(event) {
+        const cursor = event.target.result;
+        if (cursor) {
+            if (Object.values(cursor.value).includes(hash)) {
+                console.log(`Match found: ${cursor.value.phrase}`);
+                document.getElementById("searchResult").innerText = `Word found: ${cursor.value.phrase}`;
+                hideSearchOverlay(); // Hide overlay when search is complete
+                return;
+            } else {
+                cursor.continue();
+            }
+        } else {
+            console.warn(`Hash ${hash} not found in dataset ${datasetIndex}, loading next...`);
+            datasetIndex++;
+
+            let githubRawURL = `https://baburkhardt.github.io/hashlookup_project/${list}/data.${datasetIndex}.json`;
+
+            fetch(githubRawURL)
+                .then(response => {
+                    if (!response.ok) {
+                        console.warn(`File not found: ${githubRawURL}. Moving to next list.`);
+                        nextListCallback(); // Move to the next list when a file isn't found
+                        return Promise.reject("File not found");
+                    }
+                    return response.json();
+                })
+                .then(newData => {
+                    if (newData.length > 0) {
+                        clearIndexedDB(() => {
+                            loadDatasetIntoIndexedDB(newData, () => {
+                                searchHashSequentiallyGitHub(hash, list, datasetIndex, nextListCallback);
+                            });
+                        });
+                    } else {
+                        console.log(`Finished checking ${list}. Moving to next list.`);
+                        nextListCallback(); // Move to next list
+                    }
+                })
+                .catch(() => {
+                    document.getElementById("searchResult").innerText = "No more datasets available.";
+                    hideSearchOverlay();
+                });
+        }
+    };
+}
+
+
+/*
+async function searchHashSequentiallyGitHub(hash, list, datasetIndex = 0) {
+    console.log(`Searching for hash: ${hash} in dataset ${datasetIndex} of ${list}`);
+
     const transaction = db.transaction(["hashes"], "readonly");
     const store = transaction.objectStore("hashes");
     const cursorRequest = store.openCursor();
@@ -160,7 +253,7 @@ async function searchHashSequentiallyGitHub(hash, datasetIndex = 0) {
             // Hash not found, load next dataset from GitHub
             datasetIndex++;
 			
-            let githubRawURL = `https://baburkhardt.github.io/hashlookup_project/data.${datasetIndex}.json`;
+            let githubRawURL = `https://baburkhardt.github.io/hashlookup_project/${list}/data.${datasetIndex}.json`;
 			console.log("Requesting Data...",githubRawURL);
             fetch(githubRawURL)
                 .then(response => {
@@ -171,7 +264,7 @@ async function searchHashSequentiallyGitHub(hash, datasetIndex = 0) {
                     if (newData.length > 0) {
                         clearIndexedDB(() => {
                             loadDatasetIntoIndexedDB(newData, () => {
-                                searchHashSequentiallyGitHub(hash, datasetIndex);
+                                searchHashSequentiallyGitHub(hash, list, datasetIndex);
                             });
                         });
                     } else {
@@ -186,7 +279,7 @@ async function searchHashSequentiallyGitHub(hash, datasetIndex = 0) {
         }
     };
 }
-
+*/
 function clearIndexedDB(callback) {
     const transaction = db.transaction(["hashes"], "readwrite");
     const store = transaction.objectStore("hashes");
@@ -225,9 +318,9 @@ function loadDatasetIntoIndexedDB(dataset, callback) {
         const readStore = readTransaction.objectStore("hashes");
         const getAllRequest = readStore.getAll();
 
-        getAllRequest.onsuccess = function() {
+        /*getAllRequest.onsuccess = function() {
             console.log("IndexedDB contents:", getAllRequest.result);
-        };
+        };*/
 
         callback();
     };
